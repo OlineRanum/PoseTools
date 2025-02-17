@@ -28,6 +28,7 @@ const notesRoutes = require('./server_utils/routes/notesRoutes');
 const mocapGifsRoutes = require('./server_utils/routes/mocapGifsRoutes');
 const dataMocapRoutes = require('./server_utils/routes/dataRoutes');
 const clusterRoutes = require('./server_utils/routes/clusterRoutes');
+const predictRoutes = require('./server_utils/routes/predictRoutes');
 
 // Mount routes
 app.use('/api/graphics/gifs', gifsRoutes);
@@ -37,10 +38,11 @@ app.use('/api/notes', notesRoutes);
 app.use('/api/graphics/mocap_gifs', mocapGifsRoutes);
 app.use('/api/data', dataMocapRoutes);
 app.use('/api/cluster', clusterRoutes);
+app.use('/api/predict', predictRoutes);
 
 
 // Start the server
-const PORT = process.env.PORT || 2008;
+const PORT = process.env.PORT || 2009;
 app.listen(PORT, () => {
     console.log(`Server is running at http://localhost:${PORT}`);
 });
