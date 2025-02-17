@@ -171,7 +171,6 @@ class DataLoader:
     
     def load_marker_data(self, file_path):
         # Read the CSV file while skipping the header row
-        file_path = '/home/oline/SL_Automatic_Phonetic_Annotation/src/server/public/data/mocap/V_markerData.csv'
         df = pd.read_csv(file_path, skiprows=1)
 
         return df
