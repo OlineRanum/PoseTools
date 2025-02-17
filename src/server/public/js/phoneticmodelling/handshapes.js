@@ -1,4 +1,4 @@
-import { initReferencePoseHSViewer, initClusterSubTab } from './handshape_modules/handshapes_modules.js';
+import { initReferencePoseHSViewer, initClusterSubTab, initPredictSubTab } from './handshape_modules/handshapes_modules.js';
 
 export function initHandshapes() {
   // 1. Initialize your sub-subtab menu
@@ -7,6 +7,7 @@ export function initHandshapes() {
 
   let referencePosesLoaded = false;
   let clusterSubTabLoaded = false;
+  let predictSubTabLoaded = false;
 
   menuItems.forEach((item) => {
     item.addEventListener('click', () => {
@@ -30,6 +31,11 @@ export function initHandshapes() {
             console.log('Initializing cluster subtab');
             initClusterSubTab();
             clusterSubTabLoaded = true;
+        }
+        if (targetId === 'predict-handshapes' && !predictSubTabLoaded) {
+          console.log('Initializing predict subtab');
+          initPredictSubTab();
+          predictSubTabLoaded = true;
         }
     });
   });

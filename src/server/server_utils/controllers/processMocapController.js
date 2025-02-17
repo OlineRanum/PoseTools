@@ -38,7 +38,7 @@ exports.processMocapFiles = (req, res, progressData) => {
 
         // Optional: Log each file's expected path
         files.forEach(file => {
-            const filePath = path.resolve(__dirname, '../../../modules/data/mocap_data/', file);
+            const filePath = path.resolve(__dirname, '../../../modules/data/mocap_data/ref/', file);
             console.log(`Expected file path: ${filePath}`);
             if (!fs.existsSync(filePath)) {
                 console.warn(`File does not exist: ${filePath}`);

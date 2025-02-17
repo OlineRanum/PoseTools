@@ -158,10 +158,6 @@ export function initReferencePoseHSViewer() {
 
 }
 
-// Listen for user interaction in "Cluster & Select Reference Poses" tab
-
-// We'll assume you already have the code for sub-subtab switching.
-// Below is specifically for the cluster-handshapes sub-subtab functionality:
 export function initClusterSubTab() {
     const dataTypeRadios       = document.querySelectorAll('input[name="dataType"]');
     const dataFilesContainer   = document.getElementById('data-files-container');
@@ -275,4 +271,183 @@ export function initClusterSubTab() {
         alert('Clustering completed! Check console or UI for results.');
     });
   }
-  
+
+
+// predict.js
+export function initPredictSubTab() {
+  // Get references to elements
+  const modelSelect = document.getElementById('mocap-model-select');
+  const dataTypeRadios = document.querySelectorAll('#predict-handshapes input[name="dataType"]');
+  const dataFilesContainer = document.getElementById('data-files-container');
+  const mocapFilesSelect = document.getElementById('mocap-files-select');
+  const visualizeCheckbox = document.getElementById('visualize-checkbox-predict');
+  const processButton = document.getElementById('predict-process-btn');
+  const gifSelectPredict = document.getElementById('mocap-gif-select-predict'); // Get it once
+  const gifImage = document.getElementById('mocap-gif-image');
+
+  // (A) Populate Model Select with "ED Model"
+  modelSelect.innerHTML = '';
+  const modelOption = document.createElement('option');
+  modelOption.value = 'ED Model';
+  modelOption.textContent = 'ED Model';
+  modelSelect.appendChild(modelOption);
+
+  // (B) Handle data type selection and file fetching
+  dataTypeRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+      const selectedType = radio.value; // "mocap" or "video"
+      fetchDataFiles(selectedType);
+    });
+  });
+
+  function fetchDataFiles(dataType) {
+    console.log('fetchDataFiles called with:', dataType);
+    if (dataType === 'mocap') {
+      dataFilesContainer.style.display = 'none';
+      mocapFilesSelect.style.display = 'block';
+      console.log("Showing mocap dropdown");
+      // Populate dropdown
+      fetch(`/api/data/${dataType}/corp`)
+        .then(response => response.json())
+        .then(gifs => {
+          console.log("GIFs received:", gifs);
+          // Clear and populate the dropdown with options
+          mocapFilesSelect.innerHTML = '<option value="">--Select a GIF--</option>';
+          gifs.forEach(gif => {
+            const option = document.createElement('option');
+            // If gif is an object, use its properties; if it's a string, use it directly
+            if (typeof gif === 'object' && gif !== null) {
+              option.value = gif.filename;
+              option.textContent = gif.displayName;
+            } else {
+              option.value = gif;
+              option.textContent = gif;
+            }
+            mocapFilesSelect.appendChild(option);
+          });
+          console.log("GIF dropdown populated.");
+        })
+        .catch(err => {
+          console.error('Error fetching mocap files:', err);
+          mocapFilesSelect.innerHTML = '<option style="color:red;">Error loading files.</option>';
+        });
+    } else {
+      mocapFilesSelect.style.display = 'none';
+      dataFilesContainer.style.display = 'block';
+      console.log("Showing checkbox container for non-mocap files");
+      // Populate checkboxes
+      fetch(`/api/data/${dataType}`)
+        .then(response => response.json())
+        .then(files => {
+          dataFilesContainer.innerHTML = '';
+          files.forEach(fileName => {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = fileName;
+            checkbox.id = `file-${fileName}`;
+
+            const label = document.createElement('label');
+            label.htmlFor = checkbox.id;
+            label.textContent = fileName;
+
+            const wrapper = document.createElement('div');
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(label);
+            dataFilesContainer.appendChild(wrapper);
+          });
+        })
+        .catch(err => {
+          console.error('Error fetching non-mocap files:', err);
+          dataFilesContainer.innerHTML = '<p style="color:red;">Error loading files.</p>';
+        });
+    }
+  }
+
+  // (C) Handle the Predict button click
+  processButton.addEventListener('click', () => {
+    const selectedModel = modelSelect.value;
+    const selectedDataType = Array.from(dataTypeRadios).find(r => r.checked)?.value;
+    const useVisualize = visualizeCheckbox.checked;
+    let selectedFiles = [];
+    if (selectedDataType === 'mocap') {
+      // Get selected options from the dropdown (can be multi-select)
+      selectedFiles = Array.from(mocapFilesSelect.selectedOptions).map(opt => opt.value);
+    } else {
+      // Get selected files from checkboxes
+      const checkedBoxes = dataFilesContainer.querySelectorAll('input[type="checkbox"]:checked');
+      selectedFiles = Array.from(checkedBoxes).map(cb => cb.value);
+    }
+
+    // Basic validation
+    if (!selectedModel) {
+      alert('Please select a model.');
+      return;
+    }
+    if (!selectedDataType) {
+      alert('Please select a data type (Motion Capture or Video).');
+      return;
+    }
+    if (selectedFiles.length === 0) {
+      alert('Please select at least one file.');
+      return;
+    }
+
+    const bodyPayload = {
+      model: selectedModel, // will be "ED Model"
+      dataType: selectedDataType,
+      files: selectedFiles,
+      precropped: false,
+      visualize: useVisualize
+    };
+
+    console.log('Posting prediction payload:', bodyPayload);
+
+    fetch('/api/predict/handshapes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyPayload)
+    })
+      .then(resp => resp.json())
+      .then(result => {
+        console.log('Prediction result:', result);
+        alert('Prediction completed! Check console for details.');
+      })
+      .catch(err => {
+        console.error('Error calling prediction API:', err);
+      });
+  });
+
+  // (D) Populate GIF Viewer with processed visualizations
+  console.log("About to fetch GIFs from /api/graphics/mocap_gifs");
+  fetch('/api/graphics/mocap_gifs')
+    .then(res => res.json())
+    .then(gifs => {
+      console.log("GIFs received:", gifs);
+      // Use gifSelectPredict from above (make sure the element exists)
+      const gifSelectPredict = document.getElementById('mocap-gif-select-predict');
+      if (!gifSelectPredict) {
+        console.error("Element mocap-gif-select-predict not found");
+        return;
+      }
+      gifSelectPredict.innerHTML = '<option value="">--Select a GIF--</option>';
+      gifs.forEach(gif => {
+        const option = document.createElement('option');
+        if (typeof gif === 'object' && gif !== null) {
+          option.value = gif.filename;
+          option.textContent = gif.displayName;
+        } else {
+          option.value = gif;
+          option.textContent = gif;
+        }
+        gifSelectPredict.appendChild(option);
+      });
+      console.log("GIF dropdown populated.");
+      // Attach event listener
+      gifSelectPredict.addEventListener('change', () => {
+        const selectedGifUrl = gifSelectPredict.value;
+        console.log("Selected GIF URL:", selectedGifUrl);
+        gifImage.src = '/graphics/mocap_gifs/' + selectedGifUrl;
+      });
+    })
+    .catch(err => console.error('Error fetching GIFs:', err));
+}

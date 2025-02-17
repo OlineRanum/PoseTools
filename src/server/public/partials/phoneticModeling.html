@@ -79,11 +79,74 @@
         
         <!-- Sub-SubTab 3: Predict Handshapes -->
         <div class="sub-sub-tab-content" id="predict-handshapes">
-            <!-- Placeholder content for now -->
             <h4>Predict Handshapes</h4>
-            <p>Some UI or script for your prediction logic can go here.</p>
+            <!-- Model selector -->
+            <div>
+            <select id="mocap-model-select">
+                <option value="">--Select a Model--</option>
+                <option value="ED Model">ED Model</option>
+                </select>
+                  
+            </div>
+            <!-- Data type radio buttons -->
+            <div>
+            <h4>Select Datatype</h4>
+            <label>
+                <input type="radio" name="dataType" value="mocap"> Motion Capture
+            </label>
+            <label>
+                <input type="radio" name="dataType" value="video"> Video
+            </label>
+            </div>
+            <!-- Container to display the list of files -->
+            <div id="data-files-container" style="margin: 1rem 0;">
+            <!-- Checkboxes for files will be inserted here -->
+            </div>
+            <!-- Drop-down (multi-select) for mocap files -->
+            <select id="mocap-files-select" multiple style="margin: 1rem 0; display: none;">
+                <!-- Options will be dynamically populated -->
+            </select>
+            <!-- Visualize checkbox -->
+            <div style="margin: 0.5rem 0;">
+            <label>
+                <input type="checkbox" id="visualize-checkbox-predict">
+                Visualize Results
+            </label>
+            </div>
+            <!-- Process button to run prediction -->
+            <div>
+            <button id="predict-process-btn">Predict</button>
+            </div>
+            <br>
+            <!-- GIF Viewer Section for Processed Visualizations -->
+            <div class="gif-viewer-container">
+            <div class="gif-viewer">
+                <h4>Visual Result Loader</h4>
+                <select id="mocap-gif-select">
+                <option value="">--Select a GIF--</option>
+                <!-- Options will be dynamically populated -->
+                </select>
+                <div id="mocap-loading" style="display: none;">
+                Loading...
+                <div id="mocap-progress-container">
+                    <div id="mocap-progress-bar"></div>
+                </div>
+                </div>
+                <div class="frame-display">
+                <img id="mocap-gif-image" src="" alt="Selected GIF Frame">
+                <div id="mocap-frame-info">Frame: 0</div>
+                </div>
+                <div class="controls">
+                <button id="mocap-prev-btn" disabled>Previous Frame</button>
+                <button id="mocap-next-btn" disabled>Next Frame</button>
+                <button id="mocap-toggle-play-btn" disabled>Play GIF</button>
+                <label for="mocap-frame-rate">Frame Rate (ms):</label>
+                <input type="number" id="mocap-frame-rate" value="200" min="10" max="1000">
+                </div>
+            </div>
+            </div>
         </div>
-        <!-- =========== End of Sub-Subtab Menu for Handshapes =========== -->  
+  
         
     
     <div id="locationContent" class="phonetic-tab-content" style="display: none;">
