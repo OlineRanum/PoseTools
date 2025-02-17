@@ -79,7 +79,7 @@ def main():
             
             if precropped:
                 if file_name.split('_marker')[0] in precropped_indexes:
-                    exclude_idx = precropped_indexes[file_name.split('_')[0]]
+                    exclude_idx = precropped_indexes[file_name.split('_marker')[0]]
                     exclude_idx = [idx for idx in exclude_idx if idx < normalized_right_handshape.shape[0]]
                     normalized_right_handshape = np.delete(normalized_right_handshape, exclude_idx, axis=0)
 
