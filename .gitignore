@@ -10,7 +10,7 @@ src/models/graphTransformer/trained_models
 src/models/temporal_ponita
 trained_models/
 
-
+*.csv
 *.gif
 *.mp4
 *.hamer
@@ -20,6 +20,7 @@ trained_models/
 
 # Server stuff
 src/server/node_modules/
+src/server/public/data/mocap/
 
 
 ## Graphics
