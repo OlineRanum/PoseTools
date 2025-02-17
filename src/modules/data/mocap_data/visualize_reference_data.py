@@ -4,7 +4,7 @@ matplotlib.use('Agg')  # Use a non-interactive backend if running on a server
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.animation import FuncAnimation, FFMpegWriter
-import os
+import os, sys
 try:
     from src.modules.data.mocap_data.utils.dataloader import DataLoader
     from src.modules.data.mocap_data.utils.normalizer import Normalizer
@@ -15,7 +15,9 @@ import re
 
 class Plotter:
     def __init__(self, body_data= None, right_hand_data= None, right_wrist_data= None,
-                 frames_dir= None, edges= None, hand_edges= None, marker_names= None,marker_names_hands = None, cluster_data = None, frames_to_skip = 10, save_frames=True):
+                 frames_dir= None, edges= None, hand_edges= None, marker_names= None,
+                 marker_names_hands = None, cluster_data = None, frames_to_skip = 10, 
+                 save_frames=True, labels = None):
         """
         Args:
             body_data (ndarray):       Shape (num_frames, num_body_points, 3)
@@ -34,6 +36,7 @@ class Plotter:
         self.marker_names_hands = marker_names_hands
         self.frames_to_skip = frames_to_skip    
         self.cluster_data = cluster_data
+        self.labels = labels
         
         try:
             self.num_frames = len(body_data)
@@ -110,6 +113,9 @@ class Plotter:
         self.fig = plt.figure(figsize=(12, 8))
         gs = GridSpec(2, 3, width_ratios=[2, 1, 1], figure=self.fig, wspace=0.4, hspace=0.4)
 
+        
+
+
         # ------------------- Row 0 -------------------
         # (0, 0) Full body 3D subplot
         ax_body_3d = self.fig.add_subplot(gs[:, 0], projection='3d')
@@ -171,10 +177,17 @@ class Plotter:
         Update all plots and text for the given frame index.
         Called automatically by FuncAnimation on each frame.
         """
+        print("Labels: ", len(self.labels), flush=True, file=sys.stderr)
+        print("Frames: ", self.num_frames, flush=True, file=sys.stderr)
+        print("Hand data: ", len(self.right_hand_data), flush=True, file=sys.stderr)
+        import json 
+        print(json.dumps(self.labels), flush=True, file=sys.stderr)      
+        
+
         # --- 1) Clear and Update Full Body 3D Plot --------------------------------------
         if frame_idx % 50 == 0:  # Update every 50 frames
             progress_percentage = int((frame_idx / self.num_frames) * 100)
-            print(f"Progress: {progress_percentage}", flush=True)
+            print(f"Progress: {progress_percentage}", flush=True, file=sys.stderr)
 
         ax_body = self.axes['body']
         ax_body.cla()  # Clear the plot
@@ -257,6 +270,11 @@ class Plotter:
         y_vals_r = self.right_wrist_data[:frame_idx + 1]
         self.scatter_wrist_r.set_offsets(np.c_[x_vals_r, y_vals_r])
 
+
+        # --- 5) Set Label title ------------------------------
+        if self.labels is not None:
+            self.sup_title = self.fig.suptitle(f"Label: {self.labels[frame_idx]}", fontsize=16)
+            
         # --- 5) Optionally, save frames to disk ------------------------------
         if self.save_frames:
             frame_filename = f"frame_{frame_idx:04d}.png"
@@ -269,7 +287,7 @@ class Plotter:
         return []
 
 
-    def create_animation(self, save_path, fps=60):
+    def create_animation(self, save_path, fps=5):
         """Create and save the animation as a video (e.g., mp4) using FFMpegWriter."""
         self._initialize_figure()
 
@@ -295,15 +313,15 @@ class Plotter:
                 save_path,
                 writer=FFMpegWriter(fps=fps)
             )
-            print(f"Animation saved to {save_path}")
+            print(f"Animation saved to {save_path}", flush = True, file=sys.stderr)
         except Exception as e:
-            print(f"Error saving animation: {e}")
+            print(f"Error saving animation: {e}", flush = True, file=sys.stderr)
         finally:
             plt.close(self.fig)
             #self.progress_bar.close()
 
 
-def process_file(file_path, frames_dir, gifs_dir, frames_to_skip=10, fps=15):
+def process_file(file_path, frames_dir, gifs_dir, frames_to_skip=10, fps=15, data = None, skip_file = True, labels = None):
     """
     Processes a single file and generates frames and an animation.
     
@@ -314,23 +332,33 @@ def process_file(file_path, frames_dir, gifs_dir, frames_to_skip=10, fps=15):
         frames_to_skip (int): Number of frames to skip when processing.
         fps (int): Frames per second for the animation.
     """
-
     # Extract name from filename
     filename = os.path.basename(file_path)
     name_match = re.match(r"(.*?)_markerData\.csv", filename)
     if not name_match:
-        print(f"Skipping file: {file_path}. Filename format not recognized.")
-        return
+        name_match = re.match(r"(.*?)_MarkerData\.csv", filename)
+        if skip_file:
+            if not name_match:
+                print(f"Skipping file: {file_path}. Filename format not recognized.", flush = True, file=sys.stderr)
+                return
+        else:
+            try:
+                os.remove(os.path.join(gifs_dir, filename))
+                os.remove(os.path.join(frames_dir, filename))
+            except FileNotFoundError:
+                pass
+            print("Removed old unlabeled data", flush=True, file=sys.stderr)
+
 
     name = name_match.group(1)
 
     # Check if the GIF already exists
     file_gif_path = os.path.join(gifs_dir, f"{name}.gif")
     if os.path.exists(file_gif_path):
-        print(f"Skipping {file_path}: GIF already exists.")
+        print(f"Skipping {file_path}: GIF already exists.", flush = True, file=sys.stderr)
         return
     else:
-        print(f"Processing {file_path}...")
+        print(f"Processing {file_path}...", flush = True, file=sys.stderr)
 
     # Create subdirectories for frames
     file_frames_dir = os.path.join(frames_dir, name)
@@ -344,17 +372,33 @@ def process_file(file_path, frames_dir, gifs_dir, frames_to_skip=10, fps=15):
 
     # Load and preprocess data
     df = loader.load_data()
+
+
     marker_names, body_data = loader.get_marker_arr()
     body_pose = body_data[::frames_to_skip]
     normalized_body_data = [normalizer.full_pose_normalizer(marker_names, frame) for frame in body_pose]
 
     normalizer.load_transformations()
     right_hand, marker_names_hands = loader.get_hand()
+
     right_hand = right_hand[::frames_to_skip]
     normalized_right_handshape = normalizer.normalize_handshape(right_hand, marker_names_hands)
+    valid_frames = ~np.isnan(normalized_right_handshape).any(axis=(1, 2))
+    normalized_right_handshape = normalized_right_handshape[valid_frames]
+    
+    
+    labels = labels[::frames_to_skip]
+    normalized_right_handshape = data[::frames_to_skip]
+
+    print('lengths handshape: ', len(normalized_right_handshape))
+    print('lengths labels ', len(labels))
+
+    
 
     right_wrist = loader.get_keypoint(df, 'ROWR', mask_nans=True)[::frames_to_skip]
     normalized_right_wrist = normalizer.normalize_wrist(right_wrist)
+
+
 
     # Create and save animation
     plotter = Plotter(
@@ -367,7 +411,8 @@ def process_file(file_path, frames_dir, gifs_dir, frames_to_skip=10, fps=15):
         marker_names=marker_names,
         marker_names_hands=marker_names_hands,
         frames_to_skip=frames_to_skip,
-        save_frames=True
+        save_frames=True,
+        labels=labels
     )
     plotter.create_animation(save_path=file_gif_path, fps=fps)
 
@@ -384,7 +429,7 @@ def main(data_list):
 
     # Process all relevant files in the data folder
     for file in data_list:
-        print(f"Processing file: {file}", flush = True)
+        print(f"Processing file: {file}", flush = True, file=sys.stderr)
         file_path = os.path.join(data_folder, file)
         process_file(file_path, frames_root_dir, gifs_root_dir)
 
