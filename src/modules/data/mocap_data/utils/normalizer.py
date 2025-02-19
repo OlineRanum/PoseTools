@@ -1,10 +1,22 @@
 
 import numpy as np
-
+import json, os 
+from scipy.spatial import procrustes
 
 class Normalizer:
     def __init__(self, loader):
         self.loader = loader
+        self.reference_handshape = self.load_reference_handshape()
+
+
+    def load_reference_handshape(self):
+        """Load precomputed reference handshape from JSON file."""
+        reference_file = "/home/oline/SL_Automatic_Phonetic_Annotation/src/server/public/output/reference_hand.json"
+        if os.path.exists(reference_file):
+            with open(reference_file, "r") as f:
+                ref_data = json.load(f)
+            return np.array(ref_data["reference_pose"])
+        return None
 
     @staticmethod
     def normalize_vector(vec):
@@ -114,11 +126,17 @@ class Normalizer:
         rowr_idx = self.marker_names.tolist().index("ROWR")
 
 
-    def normalize_handshape(self, handshape, marker_names):
 
+    def normalize_handshape(self, handshape, marker_names):
+        """Normalize handshapes using existing transformations + Procrustes alignment."""
         normalized_handshape = []
         for frame in handshape:
             normalized_marker_data = self.apply_normalization(frame, marker_names, self.translation, self.scale_factor, self.rotation_matrix)
+
+            ## Apply Procrustes alignment to reference handshape
+            #if self.reference_handshape is not None:
+            #    normalized_marker_data, _, _ = procrustes(self.reference_handshape, normalized_marker_data)
+            
             normalized_handshape.append(normalized_marker_data)
         
         return np.array(normalized_handshape)

@@ -167,6 +167,8 @@ class DataLoader:
         if "Unnamed: 220" in df.columns:
             df = df.drop(columns=["Unnamed: 220"])
         self.df = df[new_columns]
+        self.df.dropna(inplace=True)
+        
         return self.df
     
     def load_marker_data(self, file_path):
